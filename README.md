@@ -8,6 +8,9 @@ This project is a comprehensive network infrastructure simulation using **Cisco 
 
 - Developed a hierarchical and segmented IP-based network
 - Integrated Main Campus and Branch Campus subnets
+- VPN Tunneling (IPsec)
+- Spanning Tree Protocol (STP)
+- EtherChannel Link Aggregation 
 - Implemented VLAN segmentation: WLAN, LAN, DMZ, and Management
 - Configured Dynamic routing and secure firewall rules
 - Designed WAN/backbone links with CIDR subnets
