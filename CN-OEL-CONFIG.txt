@@ -1,0 +1,307 @@
+en
+conf t
+hostname B-A/D-SW
+line console 0 
+password cisco
+login
+exec-timeout 3 0
+enable secret cisco 
+service password-encryption
+banner motd #UNAUTHORIZED ACCESS IS PROHIBITED!!!!#
+no ip domain-lookup
+username cisco password cisco
+ip domain-name cisco.com
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+access-list 5 permit 192.168.10.0 255.255.255.0
+access-list 5 deny any
+line vty 0 15 
+login local 
+transport input ssh
+access-class 5 in
+exit
+do wr
+
+
+vlan 10
+name Management
+vlan 20
+name LAN
+vlan 50
+name WLAN
+
+int range f0/1-2
+switchport mode trunk
+exit
+
+int range f0/3-5                                                 
+switchport mode access
+switchport access vlan 20
+exit
+
+int f0/6
+switchport mode access
+switchport access vlan 50
+exit
+
+do wr
+
+
+
+vlan 60
+name B-LAN
+vlan 90
+name B-WLAN
+
+int range f0/1-2
+switchport mode trunk
+exit
+
+int range f0/3-5
+switchport mode access
+switchport access vlan 60
+exit
+
+int f0/6
+switchport mode access
+switchport access vlan 90
+exit
+
+do wr
+
+cisco
+en
+cisco
+conf t
+int range f0/3-24
+spanning-tree portfast
+spanning-tree bpduguard enable
+exit
+do wr
+
+
+int range f0/2-3
+switchport trunk encapsulation dot1q
+switchport mode trunk
+channel-group 1 mode active
+exit
+int Port-channel 1
+switchport mode trunk
+exit
+do wr
+
+ip routing
+int f0/1
+no switchport
+ip address 10.20.20.45 255.255.255.252
+no shut
+exit
+do wr
+
+int vlan 60 
+ip add 172.17.0.3 255.255.0.0
+ip helper-address 10.20.20.5
+ip helper-address 10.20.20.6
+standby 60 ip 172.17.0.1
+exit
+
+int vlan 90 
+ip add 10.11.0.3 255.255.0.0
+ip helper-address 10.20.20.5
+ip helper-address 10.20.20.6
+standby 90 ip 10.11.0.1
+exit
+do wr
+
+
+HQ-MLS1
+
+router ospf 15
+router-id 2.1.2.1
+network 10.20.20.32 0.0.0.3 area 0
+network 192.168.10.0 0.0.0.255 area 0
+network 172.16.0.0 0.0.255.255 area 0
+network 10.10.0.0 0.0.255.255 area 0
+exit
+do wr
+
+HQ-MLS2
+
+router ospf 15
+router-id 3.1.3.1
+network 10.20.20.36 0.0.0.3 area 0
+network 192.168.10.0 0.0.0.255 area 0
+network 172.16.0.0 0.0.255.255 area 0
+network 10.10.0.0 0.0.255.255 area 0
+exit
+do wr
+
+BR-MLS1
+
+router ospf 15
+router-id 4.1.4.1
+network 10.20.20.40 0.0.0.3 area 0
+network 172.17.0.0 0.0.255.255 area 0
+network 10.11.0.0 0.0.255.255 area 0
+exit
+do wr
+
+BR-MLS2
+
+router ospf 15
+router-id 5.1.5.1
+network 10.20.20.44 0.0.0.3 area 0
+network 172.17.0.0 0.0.255.255 area 0
+network 10.11.0.0 0.0.255.255 area 0
+exit
+do wr
+
+HQ-ISP
+
+router ospf 15
+router-id 7.1.7.1
+network 105.100.50.0 0.0.0.3 area 0
+network 20.20.20.0 0.0.0.3 area 0
+exit
+do wr
+
+INTERNET
+
+router ospf 15
+router-id 8.1.8.1
+network 20.20.20.0 0.0.0.3 area 0
+network 30.30.30.0 0.0.0.3 area 0
+exit
+do wr
+
+BR-ISP
+
+router ospf 15
+router-id 9.1.9.1
+network 10.20.20.40 0.0.0.3 area 0
+network 10.20.20.44 0.0.0.3 area 0
+network 30.30.30.0 0.0.0.3 area 0
+exit
+do wr
+
+
+
+firewall
+route ouTSIDE 0.0.0.0 0.0.0.0 105.100.50.1
+route ouTSIDE 0.0.0.0 0.0.0.0 205.200.100.1
+
+object network INSIDE1-OUTSIDE 
+subnet 192.168.10.0 255.255.255.0
+nat (INSIDE1,OUTSIDE) dynamic interface
+
+wr mem
+
+object network INSIDE1a-OUTSIDE 
+subnet 192.168.10.0 255.255.255.0
+nat (INSIDE2,OUTSIDE) dynamic interface
+wr mem
+
+
+object network INSIDE2-OUTSIDE 
+subnet 172.16.0.0 255.255.255.0
+nat (INSIDE1,OUTSIDE) dynamic interface
+
+object network INSIDE2a-OUTSIDE 
+subnet 172.16.0.0 255.255.255.0
+nat (INSIDE2,OUTSIDE) dynamic interface
+
+object network INSIDE2-OUTSIDE 
+subnet 10.10.0.0 255.255.255.0
+nat (INSIDE1,OUTSIDE) dynamic interface
+
+
+object network INSIDE1-OUTSIDE
+ subnet 172.17.0.0 255.255.0.0
+ nat (INSIDE1,OUTSIDE) dynamic interface
+object network INSIDE1a-OUTSIDE
+ subnet 172.17.0.0 255.255.0.0
+ nat (INSIDE2,OUTSIDE) dynamic interface
+
+object network INSIDE2-OUTSIDE
+ subnet 10.11.0.0 255.255.0.0
+ nat (INSIDE1,OUTSIDE) dynamic interface
+object network INSIDE2a-OUTSIDE
+ subnet 10.11.0.0 255.255.0.0
+ nat (INSIDE2,OUTSIDE) dynamic interface
+
+
+
+
+access-list RES-ACCESS EXTENDED permit icmp any any
+access-list RES-ACCESS EXTENDED permit udp any any eq 67
+access-list RES-ACCESS EXTENDED permit udp any any eq 68
+access-list RES-ACCESS EXTENDED permit udp any any eq 53
+access-list RES-ACCESS EXTENDED permit tcp any any eq 53
+access-list RES-ACCESS EXTENDED permit tcp any any eq 80
+access-list RES-ACCESS EXTENDED permit tcp any any eq 25
+access-list RES-ACCESS EXTENDED permit tcp any any eq 21
+access-list RES-ACCESS EXTENDED permit tcp any any eq 20
+
+access-group RES-ACCESS in interface OUTSIDE
+wr mem
+
+CAPWAP
+
+access-list RES-ACCESS EXTENDED permit udp any any eq 5246
+access-list RES-ACCESS EXTENDED permit udp any any eq 5247
+
+access-list RES-ACCESS EXTENDED permit udp any any eq 12222
+access-list RES-ACCESS EXTENDED permit udp any any eq 12223
+
+wr mem
+
+
+WIFI
+
+EMPLOYEES 
+	SSID EMPLOYEE WIFI
+	PSWD Cisco123
+CORPORATE
+	SSID CORP WIFI
+	PSWD Cisco123
+AUDITORS 
+	SSID AUDIT WIFI
+	PSWD Cisco123
+GUEST 
+	SSID GUEST WIFI
+	PSWD Cisco123
+
+crypto ikev1 policy 10
+ encryption 3des
+ hash sha
+ authentication pre-share
+ group 2
+ lifetime 86400
+exit
+
+tunnel-group 105.100.50.2 type ipsec-l2l
+tunnel-group 105.100.50.2 ipsec-attributes
+ ikev1 pre-shared-key cisco.12
+
+crypto ipsec ikev1 transform-set TSET esp-3des esp-sha-hmac
+
+access-list VPN-ACL extended permit ip 172.17.0.0 255.255.0.0 192.168.10.0 255.255.255.0 
+access-list VPN-ACL extended permit ip 10.11.0.0 255.255.0.0 192.168.10.0 255.255.255.0 
+
+access-list VPN-ACL extended permit ip 172.17.0.0 255.255.0.0 172.16.0.0 255.255.0.0 
+access-list VPN-ACL extended permit ip 10.11.0.0 255.255.0.0 172.16.0.0 255.255.0.0 
+
+access-list VPN-ACL extended permit ip 172.17.0.0 255.255.0.0 10.10.0.0 255.255.0.0 
+access-list VPN-ACL extended permit ip 10.11.0.0 255.255.0.0 10.10.0.0 255.255.0.0 
+
+access-list VPN-ACL extended permit ip 172.17.0.0 255.255.0.0 10.20.20.0 255.255.255.224 
+access-list VPN-ACL extended permit ip 10.11.0.0 255.255.0.0 10.20.20.0 255.255.255.224 
+
+crypto map CMAP 10 match address VPN-ACL
+crypto map CMAP 10 set peer 105.100.50.2
+crypto map CMAP 10 set ikev1 transform-set TSET
+crypto map CMAP interface OUTSIDE
+
+crypto ikev1 enable OUTSIDE
+
+wr mem
